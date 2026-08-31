@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=https://json.schemastore.org/clangd.json
+#
+# clangd config for the mingw-w64 + vcpkg toolchain this project builds with.
+# These flags mirror CPPFLAGS/CFLAGS in the Makefile; keep them in sync.
+#
+# Include paths MUST be absolute. Without a compile_commands.json, clangd
+# synthesises a fallback command whose working directory is the directory of
+# the file being edited, so "-Iinclude" would resolve to e.g.
+# src/core/include and every VSE header would go missing.
+CompileFlags:
+  Add:
+    - "-xc"
+    - "-std=c23"
+    - "--target=x86_64-w64-mingw32"
+    - "-ID:/CProjects/VSE/include"
+    - "-ID:/CProjects/VSE/src"
+    - "-ID:/CProjects/VSE/vendor/glad/include"
+    - "-IC:/vcpkg/installed/x64-mingw-dynamic/include"
+    - "-IC:/vcpkg/installed/x64-mingw-dynamic/include/SDL2"
+    - "-DSDL_MAIN_HANDLED"
