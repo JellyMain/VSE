@@ -18,6 +18,25 @@ mingw32-make test                              # build and run the test binaries
 mingw32-make clean
 ```
 
+## Examples
+
+`examples/<name>/` holds a small program that links the engine. Each directory is one
+executable, built from every `.c` directly inside it:
+
+```sh
+mingw32-make run                 # builds + launches examples/sandbox
+mingw32-make run EXAMPLE=pong    # builds + launches examples/pong
+mingw32-make example             # build it, don't launch it
+```
+
+The example binary depends on `build/libVSE.a`, which depends on the engine objects, which
+carry `-MMD` header dependencies. So editing anything in `src/` or `include/` and typing
+`mingw32-make run` recompiles exactly what changed and relaunches — the library is linked in
+place, never installed or copied.
+
+`run` executes from the repo root, so write the example's `assetRoot` and `shaderRoot`
+relative to the root (`"shaders/"`, `"examples/sandbox/assets/"`).
+
 ## Using it from a game
 
 Clone VSE next to your game and point the game's build at it — nothing is copied:

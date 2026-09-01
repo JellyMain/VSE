@@ -68,6 +68,4 @@ void VSE_AddDefaultUpdatables(VSE_Engine *engine)
 	VSE_AddUpdatable(engine, VSE_CreateRenderUpdatable());
 	VSE_AddUpdatable(engine, VSE_CreateWindowsUpdatable());
 	VSE_AddUpdatable(engine, VSE_CreateTweenersUpdatable());
-	VSE_AddUpdatable(engine, VSE_CreateUIUpdatable());
-	VSE_AddUpdatable(engine, VSE_CreateBehaviourUpdatable());
 }

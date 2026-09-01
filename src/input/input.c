@@ -1,6 +1,5 @@
 #include <SDL_events.h>
 #include "VSE/input.h"
-#include "VSE/vse.h"
 #include "VSE/update.h"
 #include "VSE/window.h"
 

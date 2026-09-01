@@ -100,10 +100,7 @@ void VSE_UpdateWindow(VSE_Engine *engine, VSE_Window *window)
 		};
 
 		VSE_Vector2Float entityMin, entityMax;
-		if (!VSE_EntityBounds(engine, entity, entity->transform.position, &entityMin, &entityMax))
-		{
-			continue;
-		}
+
 
 		if (VSE_IsBoxInBounds(entityMin, entityMax, minBounds, maxBounds))
 		{

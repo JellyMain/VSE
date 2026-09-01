@@ -1,0 +1,17 @@
+---
+BasedOnStyle: LLVM
+BreakBeforeBraces: Allman
+IndentWidth: 4
+
+# Keep empty functions on one line, expand all others
+AllowShortFunctionsOnASingleLine: Empty
+
+# Keep other short constructs expanded
+AllowShortBlocksOnASingleLine: Never
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: Empty
+AllowShortLoopsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+MaxEmptyLinesToKeep: 2
+SeparateDefinitionBlocks: Always
+---

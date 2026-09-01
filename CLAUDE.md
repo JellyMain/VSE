@@ -10,6 +10,11 @@ understand every layer of one.
 engine — its implementation and its public API. The author writes them. Every design
 decision in there is theirs to make, including the ones that turn out badly.
 
+`examples/` is the author's too. The example programs are how the API gets used in anger,
+and finding out that the API is awkward to call is the point of writing them. Claude
+maintains the build wiring that compiles and launches an example; the author writes the
+`.c`.
+
 `include/` is covered by this rule as well as `src/`, because the headers *are* the API
 and naming/shaping that API is most of the design work. If the author wants to relax
 this to implementation-only, they will delete this paragraph.
@@ -49,7 +54,10 @@ harness level rather than relying on Claude to remember it.
 
 ```sh
 mingw32-make                                   # -> build/libVSE.a
-mingw32-make test                              # build and run tests/*.c
+mingw32-make run                               # build lib + examples/sandbox, then launch it
+mingw32-make run EXAMPLE=pong                  # same, for examples/pong
+mingw32-make example                           # build the example without launching it
+mingw32-make test                              # build and run tests/*.c (none checked in yet)
 mingw32-make clean
 mingw32-make VCPKG=/path/to/installed/triplet  # if SDL2 lives elsewhere
 ```

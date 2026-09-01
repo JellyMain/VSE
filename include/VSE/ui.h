@@ -6,7 +6,6 @@
 #include "VSE/texture.h"
 #include "VSE/material.h"
 #include "VSE/update.h"
-#include "VSE/list.h"
 #include "VSE/window.h"
 #include "VSE/component.h"
 
@@ -126,7 +125,6 @@ void VSE_CreateGizmo(VSE_Engine *engine, VSE_Window *window, SDL_Color color, fl
 VSE_TextAtlas *VSE_CreateTextAtlas(char *fontPath, int fontSize);
 
 /** The per-frame UI system: parent scale/position propagation, hover and clicks. */
-VSE_Updatable *VSE_CreateUIUpdatable();
 
 /** Recomputes one window's contained-entity list and applies scale-on-resize. */
 void VSE_UpdateWindow(VSE_Engine *engine, VSE_Window *window);

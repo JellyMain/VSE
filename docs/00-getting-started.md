@@ -70,7 +70,12 @@ paths relative to `shaderRoot` to use your own.
 ## Working directory matters
 
 Asset and shader paths resolve against the process's working directory, so run the game from the
-directory that `assetRoot` is relative to. The bundled `Makefile`'s `run` target does this.
+directory that `assetRoot` is relative to.
+
+For an in-tree example under `examples/`, `mingw32-make run` launches it from the repo root, so
+write the roots relative to the root — `shaderRoot = "shaders/"` and
+`assetRoot = "examples/sandbox/assets/"`. The `"../VSE/shaders/"` form above is for the
+sibling-checkout layout, where the game is its own repo next to VSE.
 
 ## Where next
 

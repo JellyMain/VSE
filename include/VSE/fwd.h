@@ -16,8 +16,6 @@ typedef struct VSE_UpdateSystem VSE_UpdateSystem;
 typedef struct VSE_Entity VSE_Entity;
 typedef struct VSE_Component VSE_Component;
 typedef struct VSE_Transform VSE_Transform;
-typedef struct VSE_SpriteRenderer VSE_SpriteRenderer;
-typedef struct VSE_Collider VSE_Collider;
 typedef struct VSE_GizmoEntity VSE_GizmoEntity;
 typedef struct VSE_Tween VSE_Tween;
 typedef struct VSE_TweenSequence VSE_TweenSequence;

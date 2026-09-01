@@ -2,9 +2,7 @@
 #include <stdio.h>
 #include "VSE/render.h"
 #include "glad/glad.h"
-#include "VSE/vse.h"
 #include "VSE/config.h"
-#include "VSE/texture.h"
 #include "VSE/engine.h"
 
 _Static_assert(sizeof(VSE_GLuint) == sizeof(GLuint),
