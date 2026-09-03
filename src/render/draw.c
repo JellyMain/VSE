@@ -42,7 +42,7 @@ void VSE_AddPostProcessingEffect(VSE_Engine *engine, char *effectName,
                       material);
 }
 
-void VSE_AddGameEntityToDrawList(VSE_Window *window, VSE_Entity *entity)
+void VSE_AddEntityToDrawList(VSE_Window *window, VSE_Entity *entity)
 {
     VSE_ListAdd(window->gameEntitiesDrawList, entity);
 }
@@ -57,7 +57,7 @@ void VSE_AddGameEntityToAllDrawLists(VSE_Engine *engine, VSE_Entity *entity)
     for (int i = 0; i < engine->allWindows->size; i++)
     {
         VSE_Window *window = engine->allWindows->elements[i];
-        VSE_AddGameEntityToDrawList(window, entity);
+        VSE_AddEntityToDrawList(window, entity);
     }
 }
 
@@ -441,7 +441,7 @@ void VSE_UpdateRenderer(void *data, VSE_Engine *engine, float deltaTime)
             }
 
             VSE_Component *spriteRenderer =
-                VSE_GetComponent(entity, SPRITE_RENDERER_COMPONENT);
+                VSE_GetComponent(entity, SPRITE_RENDERER_COMPONENT, NULL);
 
             if (spriteRenderer == NULL)
             {

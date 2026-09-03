@@ -55,7 +55,7 @@ void VSE_RenderDynamicText(VSE_TextAtlas *textAtlas, char *text, VSE_Vector2Floa
 void VSE_AddPostProcessingEffect(VSE_Engine *engine, char *effectName, VSE_Material *material);
 
 /** Draws this entity in one specific window only. */
-void VSE_AddGameEntityToDrawList(VSE_Window *window, VSE_Entity *entity);
+void VSE_AddEntityToDrawList(VSE_Window *window, VSE_Entity *entity);
 
 /** Stops drawing this entity anywhere. */
 void VSE_RemoveGameEntityFromAllDrawLists(VSE_Engine *engine, VSE_Entity *entity);

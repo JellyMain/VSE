@@ -1,5 +1,7 @@
 #include "VSE/component.h"
+#include "VSE/dictionary.h"
 #include "VSE/engine.h"
+#include "VSE/fwd.h"
 #include "VSE/list.h"
 #include "VSE/material.h"
 #include "VSE/render.h"
@@ -8,57 +10,139 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wctype.h>
 
-VSE_Entity *VSE_CreateEntity(VSE_Engine *engine, VSE_Vector2Float position,
-                             VSE_Vector2Float scale)
+VSE_Entity *VSE_CreateEntity(VSE_Engine *engine, VSE_Window *window,
+                             VSE_Vector2Float position, VSE_Vector2Float scale)
 {
     VSE_Entity *entity = calloc(1, sizeof(VSE_Entity));
 
+    if (entity == NULL)
+    {
+        printf("Can't allocate entity\n");
+        return NULL;
+    }
+
     entity->transform.position = position;
     entity->transform.scale = scale;
-    entity->components = VSE_ListCreate(0);
+    entity->components = VSE_ListCreate(COMPONENTS_COUNT);
+
+
+    for (int i = 0; i < COMPONENTS_COUNT; i++)
+    {
+        VSE_List *componentList = VSE_ListCreate(0);
+        VSE_ListAdd(entity->components, componentList);
+    }
+
     entity->active = true;
 
     VSE_ListAdd(engine->allEntities, entity);
+
+    if (window == NULL)
+    {
+        if (VSE_ListGetSize(engine->allWindows) == 0)
+        {
+            printf("AllWindos list is empty \n");
+            return NULL;
+        }
+
+        window = VSE_ListGet(engine->allWindows, 0);
+    }
+
+    VSE_AddEntityToDrawList(window, entity);
 
     return entity;
 }
 
 void VSE_AddComponent(VSE_Entity *entity, VSE_Component *component)
 {
-    VSE_ListAdd(entity->components, component);
-}
+    VSE_List *componentTypeList =
+        VSE_ListGet(entity->components, component->type);
 
-VSE_Component *VSE_GetComponent(VSE_Entity *entity, const char *componentName)
-{
-    for (int i = 0; i < entity->components->size; i++)
+    if (component->type != BEHAVIOUR)
     {
-        VSE_Component *component = VSE_ListGet(entity->components, i);
-        if (strcmp(componentName, component->name) == 0)
+        if (VSE_ListGetSize(componentTypeList) > 0)
         {
-            return component;
+            printf("Can't add more than one instance of standard component");
+            return;
         }
     }
 
-    printf("Component not found: %s\n", componentName);
-    return NULL;
+    VSE_ListAdd(componentTypeList, component);
+}
+
+VSE_Component *VSE_GetComponent(VSE_Entity *entity,
+                                VSE_ComponentType componentType,
+                                const char *componentName)
+{
+
+    if (componentType == BEHAVIOUR)
+    {
+        VSE_List *behavioursList =
+            VSE_ListGet(entity->components, componentType);
+
+        for (int i = 0; i < behavioursList->size; i++)
+        {
+            VSE_Component *component = VSE_ListGet(behavioursList, i);
+            if (strcmp(componentName, component->name) == 0)
+            {
+                return component;
+            }
+        }
+
+        printf("Behaviour component not found: %s\n", componentName);
+        return NULL;
+    }
+    else
+    {
+        VSE_List *standardComponentList =
+            VSE_ListGet(entity->components, componentType);
+
+        VSE_Component *component = VSE_ListGet(standardComponentList, 0);
+        return component;
+    }
+}
+
+VSE_Component *VSE_CreateComponent(VSE_ComponentType componentType,
+                                   const char *componentName, void *data,
+                                   void (*Start)(void *data),
+                                   void (*Update)(void *data),
+                                   void (*Cleanup)(void *data))
+{
+
+    VSE_Component *component = calloc(1, sizeof(VSE_Component));
+    if (component == NULL)
+    {
+        printf("Can't allocate component\n");
+        return NULL;
+    }
+
+    component->name = componentName;
+    component->type = componentType;
+    component->data = data;
+    component->Start = Start;
+    component->Update = Update;
+    component->Cleanup = Cleanup;
+
+    return component;
 }
 
 VSE_Component *VSE_CreateSpriteRendererComponent(const char *texturePath)
 {
-    VSE_Component *spriteRenderer = calloc(1, sizeof(VSE_Component));
     VSE_SpriteRendererComponentData *data =
         calloc(1, sizeof(VSE_SpriteRendererComponentData));
+
+    if (data == NULL)
+    {
+        printf("Can't allocate Sprite Renderer Data");
+        return NULL;
+    }
 
     data->material = VSE_CreateMaterial(NULL, NULL);
     data->texture = VSE_LoadTexture(texturePath);
 
-    spriteRenderer->data = data;
-    spriteRenderer->name = SPRITE_RENDERER_COMPONENT;
-
-    spriteRenderer->Start = NULL;
-    spriteRenderer->Update = NULL;
-    spriteRenderer->Cleanup = NULL;
+    VSE_Component *spriteRenderer = VSE_CreateComponent(
+        SPRITE_RENDERER_COMPONENT, SPRITE_RENDERER, data, NULL, NULL, NULL);
 
     return spriteRenderer;
 }
@@ -70,12 +154,12 @@ void VSE_EntityDestroy(VSE_Engine *engine, VSE_Entity *entity)
         return;
     }
 
-    for (int i = 0; i < entity->components->size; i++)
-    {
-        // DestroyComponent(entity->components->elements[i]);
-    }
+    // for (int i = 0; i < entity->components->size; i++)
+    // {
+    //     // DestroyComponent(entity->components->elements[i]);
+    // }
 
-    VSE_ListDestroy(entity->components);
+    // VSE_ListDestroy(entity->components);
 
     if (engine != NULL)
     {
@@ -98,9 +182,18 @@ static void UpdateBehaviours(void *data, VSE_Engine *engine, float deltaTime)
             continue;
         }
 
-        for (int j = 0; j < entity->components->size; j++)
+        int type = BEHAVIOUR;
+
+        VSE_List *behavioursList = VSE_ListGet(entity->components, type);
+
+        for (int j = 0; j < behavioursList->size; j++)
         {
-            VSE_Component *component = entity->components->elements[j];
+            VSE_Component *component = VSE_ListGet(behavioursList, j);
+            if (component->Update != NULL)
+            {
+                void *data = component->data;
+                component->Update(data);
+            }
         }
     }
 }
