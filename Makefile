@@ -1,125 +1,198 @@
-# VSE -- Very Simple Engine
+#===============================================================================
+# BASE
 #
-#   mingw32-make                  build build/libVSE.a
-#   mingw32-make run              build the library + examples/sandbox, then launch it
-#   mingw32-make run EXAMPLE=pong same, for examples/pong
-#   mingw32-make example          build the example without launching it
-#   mingw32-make test             build and run tests/*.c (no tests checked in yet)
-#   mingw32-make clean            remove build/
-#   mingw32-make compile_commands.json   regenerate the clangd compilation database
+# Reusable part, copy this section into a new project. It gives you:
+#   - gcc on Windows (cmd.exe), debug and release builds: make BUILD=debug
+#   - compiling any .c file into build/<type>/<same path>.o
+#   - header dependency tracking, so changing a .h recompiles what includes it
+#   - make compile_commands (compile_commands.json for clangd) and make clean
 #
-# Override VCPKG if SDL2 lives elsewhere:
-#   mingw32-make VCPKG=/path/to/installed/triplet
+# Then add your targets below it. Minimal example for one .exe:
+#
+#   INCLUDES += -Isrc
+#   APP_SOURCES := $(wildcard src/*.c)
+#   ALL_SOURCES += $(APP_SOURCES)
+#
+#   all: $(BUILD_DIR)/app.exe
+#
+#   $(BUILD_DIR)/app.exe: $(call objects_of,$(APP_SOURCES))
+#   	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+#
+# Source paths must be relative and inside the project folder (no ../).
+#===============================================================================
 
-# GNU Make on Windows only invokes $(SHELL) for a recipe line that contains a shell
-# metacharacter (&, |, <, >, ;, ...); a "plain" line is spawned directly via
-# CreateProcess and fails unless its first word happens to be a real .exe already on
-# PATH. Pinning SHELL here means that whenever a line *does* get shell-routed, it
-# finds a shell regardless of the invoking terminal's PATH (mingw32-make otherwise
-# falls back to cmd.exe when sh.exe isn't on PATH). Must be the 8.3 short path --
-# spaces in SHELL break how Make builds the CreateProcess call.
-SHELL  := C:/PROGRA~1/Git/bin/sh.exe
+SHELL = cmd.exe
+CC = gcc
+CFLAGS = -std=c23 -Wall -Wextra -MMD -MP
+LDFLAGS =
+LDLIBS =
+INCLUDES =
 
-CC     := gcc
-AR     := ar
-BUILD  ?= build
-VCPKG  ?= C:/vcpkg/installed/x64-mingw-dynamic
-
-LIB := $(BUILD)/libVSE.a
-
-SRCS := $(wildcard src/*/*.c) vendor/glad/src/glad.c
-OBJS := $(SRCS:%.c=$(BUILD)/obj/%.o)
-
-# include/ is public; src/ is for internal headers; glad and SDL are private deps
-CPPFLAGS := -Iinclude -Isrc -Ivendor/glad/include \
-            -I$(VCPKG)/include -I$(VCPKG)/include/SDL2 \
-            -DSDL_MAIN_HANDLED
-
-CFLAGS   := -std=c23 -g -Wall -Wextra -Wno-unused-parameter
-
-# Shared by every rule that links an executable (tests and examples both).
-LDFLAGS  := -L$(VCPKG)/lib
-LDLIBS   := -lSDL2 -lSDL2_image -lSDL2_ttf -lopengl32
-
-TEST_SRCS := $(wildcard tests/*.c)
-TESTS     := $(TEST_SRCS:tests/%.c=$(BUILD)/tests/%.exe)
-
-# An example is one directory under examples/; every .c directly inside it becomes one
-# executable. The binary depends on $(LIB), which depends on $(OBJS), so `run` after an
-# edit anywhere in src/ or include/ recompiles exactly what changed and relaunches --
-# the library is never installed or copied, it is linked in place.
-EXAMPLE      ?= sandbox
-EXAMPLE_DIR  := examples/$(EXAMPLE)
-EXAMPLE_SRCS := $(wildcard $(EXAMPLE_DIR)/*.c)
-EXAMPLE_OBJS := $(EXAMPLE_SRCS:%.c=$(BUILD)/obj/%.o)
-EXAMPLE_BIN  := $(BUILD)/examples/$(EXAMPLE).exe
-
-# Without this, an empty example dir reaches the linker and dies on a missing WinMain.
-ifneq ($(filter run example,$(MAKECMDGOALS)),)
-ifeq ($(EXAMPLE_SRCS),)
-$(error no .c files in $(EXAMPLE_DIR)/ -- write $(EXAMPLE_DIR)/main.c first)
-endif
+#build type: make BUILD=debug or make BUILD=release (default)
+BUILD ?= release
+ifeq ($(BUILD),debug)
+  CFLAGS += -g -O0
+else ifeq ($(BUILD),release)
+  CFLAGS += -O2 -DNDEBUG
+else
+  $(error Unknown BUILD '$(BUILD)', use debug or release)
 endif
 
-.PHONY: all test clean compile_commands.json example run
-all: $(LIB)
+BUILD_ROOT:= build
+BUILD_DIR:= $(BUILD_ROOT)/$(BUILD)
 
-# rm first: `ar r` *updates* an archive, so a member whose .c you later delete would
-# otherwise sit in libVSE.a forever.
-$(LIB): $(OBJS)
-	@mkdir -p $(dir $@);
-	@rm -f $@;
-	$(AR) rcs $@ $^
-	@echo "built $@";
+#sources compiled by this Makefile, used for compile_commands.json. Add yours with ALL_SOURCES += ...
+ALL_SOURCES:=
 
-# -MMD -MP emits a .d per object listing the headers it pulled in, so touching a
-# header rebuilds exactly the objects that depend on it. Matches example sources too:
-# examples/sandbox/main.c -> build/obj/examples/sandbox/main.o
-$(BUILD)/obj/%.o: %.c
-	@mkdir -p $(dir $@);
-	$(CC) $(CPPFLAGS) $(CFLAGS) -MMD -MP -c $< -o $@
+#object files for a list of sources: src/main.c -> build/release/src/main.o
+objects_of = $(patsubst %.c,$(BUILD_DIR)/%.o,$(1))
 
-$(BUILD)/tests/%.exe: tests/%.c $(LIB)
-	@mkdir -p $(dir $@);
-	$(CC) $(CPPFLAGS) $(CFLAGS) $< $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
-	@cp -n $(VCPKG)/bin/*.dll $(dir $@) 2>/dev/null || true
+#converts / to \ for cmd.exe commands
+win_path = $(subst /,\,$(1))
 
-test: $(TESTS)
-	@for t in $(TESTS); do echo "== $$t"; ./$$t || exit 1; done
-	@echo "all tests passed";
+#all files matching a pattern in a folder and its subfolders: $(call rwildcard,build,*.d)
+rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$(d),$(2)) $(filter $(subst *,%,$(2)),$(d)))
 
-# The DLL copy puts SDL next to the .exe; Windows searches the executable's own
-# directory first, so the example runs from any working directory.
-$(EXAMPLE_BIN): $(EXAMPLE_OBJS) $(LIB)
-	@mkdir -p $(dir $@);
-	$(CC) $(EXAMPLE_OBJS) $(LIB) $(LDFLAGS) $(LDLIBS) -o $@
-	@cp -n $(VCPKG)/bin/*.dll $(dir $@) 2>/dev/null || true
-	@echo "built $@";
+.DEFAULT_GOAL:= all
 
-example: $(EXAMPLE_BIN)
 
-# Runs from the repo root, so assetRoot/shaderRoot in the example's VSE_Config are
-# written relative to the root ("shaders/", "examples/sandbox/assets/").
-run: $(EXAMPLE_BIN)
-	./$(EXAMPLE_BIN)
+$(BUILD_DIR)/%.o: %.c
+	@if not exist $(call win_path,$(@D)) mkdir $(call win_path,$(@D))
+	$(CC) $(INCLUDES) $(CFLAGS) -c $< -o $@
+
 
 clean:
-	rm -rf $(BUILD);
+	@if exist $(BUILD_ROOT) rmdir /S /Q $(BUILD_ROOT)
 
-# Regenerates the clangd compilation database from data the build already has, so
-# clangd can background-index every .c file without requiring it to be opened first.
-# Re-run this after adding/removing a .c file or changing CPPFLAGS/CFLAGS.
-CDB_SRCS := $(SRCS) $(EXAMPLE_SRCS)
-compile_commands.json:
-	@printf '[\n' > $@
-	@n=$(words $(CDB_SRCS)); i=0; \
-	for f in $(CDB_SRCS); do \
-		i=$$((i+1)); \
-		obj="$(BUILD)/obj/$${f%.c}.o"; \
-		printf '  {\n    "directory": "$(CURDIR)",\n    "file": "%s",\n    "command": "$(CC) $(CPPFLAGS) $(CFLAGS) -c %s -o %s"\n  }' "$$f" "$$f" "$$obj" >> $@; \
-		if [ $$i -lt $$n ]; then printf ',\n' >> $@; else printf '\n' >> $@; fi; \
-	done
-	@printf ']\n' >> $@
-	@echo "generated $@ ($(words $(CDB_SRCS)) entries)";
 
--include $(OBJS:.o=.d) $(EXAMPLE_OBJS:.o=.d)
+#one entry per source in ALL_SOURCES, with the same flags the build uses
+CDB_ENTRY = {"directory": "$(CURDIR)", "file": "$(1)", "output": "$(call objects_of,$(1))", "command": "$(CC) $(INCLUDES) $(CFLAGS) -c $(1) -o $(call objects_of,$(1))"}
+
+compile_commands:
+	$(file >compile_commands.json,[$(call CDB_ENTRY,$(firstword $(ALL_SOURCES)))$(foreach src,$(wordlist 2,$(words $(ALL_SOURCES)),$(ALL_SOURCES)),,$(call CDB_ENTRY,$(src)))])
+	@echo wrote compile_commands.json
+
+
+.PHONY: clean compile_commands
+
+#header dependencies written by -MMD
+-include $(call rwildcard,$(BUILD_DIR),*.d)
+
+
+
+#===============================================================================
+# VSE PROJECT -- Very Simple Engine
+#
+# make                    the library, build/<type>/libVSE.a
+# make example            build examples/sandbox without launching it
+# make behaviours         build only examples/sandbox/behaviours/*.c into .dlls
+# make run                build the library + examples/sandbox, then launch it
+# make run EXAMPLE=pong   same, for examples/pong
+# make run_tests          build and run tests/*.c (no tests checked in yet)
+#
+# make VCPKG=C:/path/to/installed/triplet   if SDL2 lives elsewhere
+#===============================================================================
+
+VCPKG ?= C:/vcpkg/installed/x64-mingw-dynamic
+
+#include/ is the public API, src/ holds internal headers, glad and SDL are private deps
+INCLUDES += -Iinclude -Isrc -Ivendor/glad/include \
+            -I$(VCPKG)/include -I$(VCPKG)/include/SDL2
+
+CFLAGS  += -Wno-unused-parameter -DSDL_MAIN_HANDLED
+LDFLAGS += -L$(VCPKG)/lib
+LDLIBS  += -lSDL2 -lSDL2_image -lSDL2_ttf -lopengl32
+
+LIBRARY:= $(BUILD_DIR)/libVSE.a
+
+all: $(LIBRARY)
+
+.PHONY: all example behaviours run run_tests
+
+#SDL's DLLs next to an .exe: Windows searches the executable's own folder first, so the
+#binary runs from any working directory. $(1) is the folder to copy them into.
+copy_dlls = if exist $(call win_path,$(VCPKG)/bin/*.dll) copy /Y $(call win_path,$(VCPKG)/bin/*.dll) $(call win_path,$(1)) >nul
+
+
+#--- library: libVSE.a with the engine and the bundled glad loader -----------
+
+LIBRARY_SOURCES:= $(wildcard src/*/*.c) vendor/glad/src/glad.c
+ALL_SOURCES += $(LIBRARY_SOURCES)
+
+#deleted first: `ar r` *updates* an archive, so a member whose .c you later delete would
+#otherwise sit in libVSE.a forever
+$(LIBRARY): $(call objects_of,$(LIBRARY_SOURCES))
+	@if exist $(call win_path,$@) del /Q $(call win_path,$@)
+	ar rcs $@ $^
+
+
+#--- examples: one folder under examples/, every .c in it links into one .exe -
+
+EXAMPLE ?= sandbox
+EXAMPLE_DIR:= examples/$(EXAMPLE)
+EXAMPLE_SOURCES:= $(wildcard $(EXAMPLE_DIR)/*.c)
+EXAMPLE_EXE:= $(BUILD_DIR)/examples/$(EXAMPLE).exe
+
+#every example is indexed by clangd, not just the one being built
+ALL_SOURCES += $(wildcard examples/*/*.c)
+
+#behaviours: every .c in the example's behaviours/ folder becomes its own .dll, loaded at
+#runtime by name -- VSE_AddBehaviour(engine, entity, "health") opens <behavioursRoot>/health.dll.
+#They are deliberately NOT linked into the .exe: EXAMPLE_SOURCES globs $(EXAMPLE_DIR)/*.c
+#only, so this subfolder never reaches the example's link line.
+BEHAVIOUR_SOURCES:= $(wildcard $(EXAMPLE_DIR)/behaviours/*.c)
+BEHAVIOUR_DLLS:= $(patsubst %.c,$(BUILD_DIR)/%.dll,$(BEHAVIOUR_SOURCES))
+ALL_SOURCES += $(wildcard examples/*/behaviours/*.c)
+
+#.c -> .o -> .dll is a chain of two implicit rules, which make treats the .o as a temporary
+#of and deletes -- and then rebuilds the .dll from scratch on the next run, every run.
+#.SECONDARY keeps the objects, so the .d files below stay meaningful and builds stay incremental.
+.SECONDARY: $(call objects_of,$(BEHAVIOUR_SOURCES))
+
+#without this an empty example folder reaches the linker and dies on a missing WinMain
+ifneq ($(filter run example,$(MAKECMDGOALS)),)
+ifeq ($(EXAMPLE_SOURCES),)
+$(error no .c files in $(EXAMPLE_DIR)/, write $(EXAMPLE_DIR)/main.c first)
+endif
+endif
+
+#the .exe depends on $(LIBRARY), which depends on the engine objects, so `run` after an
+#edit anywhere in src/ or include/ recompiles exactly what changed and relaunches --
+#the library is never installed or copied, it is linked in place
+$(EXAMPLE_EXE): $(call objects_of,$(EXAMPLE_SOURCES)) $(LIBRARY)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+	@$(call copy_dlls,$(@D))
+
+#-shared is the whole difference between a .dll and an .exe -- nothing in the .c says which
+#it is. The .o comes from the BASE rule, so -MMD tracking applies here too: editing
+#include/VSE/component.h rebuilds every behaviour .dll that includes it.
+#
+#--no-undefined: a behaviour that calls an engine function directly cannot work -- the engine
+#lives in the .exe, not in the .dll. Without this flag the link succeeds and LoadLibraryA
+#fails at runtime with a bare error 126; with it, the build fails and names the symbol.
+$(BUILD_DIR)/%.dll: $(BUILD_DIR)/%.o
+	$(CC) -shared $< -Wl,--no-undefined -o $@
+
+behaviours: $(BEHAVIOUR_DLLS)
+
+example: $(EXAMPLE_EXE) $(BEHAVIOUR_DLLS)
+
+#runs from the repo root, so assetRoot/shaderRoot in the example's VSE_Config are
+#written relative to the root ("shaders/", "examples/sandbox/assets/")
+run: $(EXAMPLE_EXE) $(BEHAVIOUR_DLLS)
+	$(call win_path,$(EXAMPLE_EXE))
+
+
+#--- tests: one .exe per tests/*.c, each linked against the library -----------
+
+TESTS_SOURCES:= $(wildcard tests/*.c)
+TESTS_EXES:= $(TESTS_SOURCES:tests/%.c=$(BUILD_DIR)/tests/%.exe)
+ALL_SOURCES += $(TESTS_SOURCES)
+
+$(BUILD_DIR)/tests/%.exe: $(BUILD_DIR)/tests/%.o $(LIBRARY)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+	@$(call copy_dlls,$(@D))
+
+#stops at the first failing test
+run_tests: $(TESTS_EXES)
+	$(foreach t,$(TESTS_EXES),$(call win_path,$(t)) &&) echo all tests passed

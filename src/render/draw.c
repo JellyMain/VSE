@@ -1,4 +1,5 @@
-#include "VSE/component.h"
+#include "VSE/components.h"
+#include "VSE/entity.h"
 #include "VSE/dictionary.h"
 #include "VSE/engine.h"
 #include "VSE/math.h"
@@ -441,7 +442,7 @@ void VSE_UpdateRenderer(void *data, VSE_Engine *engine, float deltaTime)
             }
 
             VSE_Component *spriteRenderer =
-                VSE_GetComponent(entity, SPRITE_RENDERER_COMPONENT, NULL);
+                VSE_GetComponent(entity, VSE_SPRITE_RENDERER_COMPONENT, NULL);
 
             if (spriteRenderer == NULL)
             {

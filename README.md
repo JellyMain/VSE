@@ -12,11 +12,17 @@ windows themselves are part of the game) straightforward.
 Requires MinGW-w64 gcc and SDL2 / SDL2_image / SDL2_ttf. Paths to SDL come from a `VCPKG` variable:
 
 ```sh
-mingw32-make                                   # -> build/libVSE.a
-mingw32-make VCPKG=/path/to/installed/triplet  # if SDL2 lives elsewhere
-mingw32-make test                              # build and run the test binaries
+mingw32-make                                   # -> build/release/libVSE.a
+mingw32-make BUILD=debug                       # -> build/debug/libVSE.a, -g -O0
+mingw32-make VCPKG=C:/path/to/installed/triplet  # if SDL2 lives elsewhere
+mingw32-make run_tests                         # build and run the test binaries
+mingw32-make compile_commands                  # regenerate compile_commands.json for clangd
 mingw32-make clean
 ```
+
+`BUILD` selects the build type — `release` (the default, `-O2 -DNDEBUG`) or `debug`
+(`-g -O0`). Each gets its own object tree under `build/<type>/`, so switching between them
+does not force a full rebuild.
 
 ## Examples
 
@@ -29,7 +35,7 @@ mingw32-make run EXAMPLE=pong    # builds + launches examples/pong
 mingw32-make example             # build it, don't launch it
 ```
 
-The example binary depends on `build/libVSE.a`, which depends on the engine objects, which
+The example binary depends on `build/release/libVSE.a`, which depends on the engine objects, which
 carry `-MMD` header dependencies. So editing anything in `src/` or `include/` and typing
 `mingw32-make run` recompiles exactly what changed and relaunches — the library is linked in
 place, never installed or copied.
@@ -44,9 +50,9 @@ Clone VSE next to your game and point the game's build at it — nothing is copi
 ```make
 VSE_DIR ?= ../VSE
 CPPFLAGS += -I$(VSE_DIR)/include
-LDLIBS   += $(VSE_DIR)/build/libVSE.a
+LDLIBS   += $(VSE_DIR)/build/release/libVSE.a
 
-$(VSE_DIR)/build/libVSE.a: force
+$(VSE_DIR)/build/release/libVSE.a: force
 	@$(MAKE) -C $(VSE_DIR)
 force: ;
 ```

@@ -1,31 +1,17 @@
-#include "VSE/component.h"
+#include "VSE/components.h"
 #include "VSE/engine.h"
+#include "VSE/entity.h"
 #include "VSE/fwd.h"
-#include "VSE/render.h"
 #include "VSE/types.h"
 #include "VSE/update.h"
 #include "VSE/window.h"
-#include <stdio.h>
 #include <stdlib.h>
 
-typedef struct Health
-{
-    int currentHealth;
-} Health;
-
-void UpdateHealth(void *data)
-{
-
-    Health *healthData = data;
-
-    healthData->currentHealth--;
-
-    printf("Current health %d \n", healthData->currentHealth);
-}
 
 int main(void)
 {
-    VSE_Config config = {.assetRoot = "examples/sandbox/assets",
+    VSE_Config config = {.behavioursRoot = "build/debug/examples/sandbox/behaviours/",
+                         .assetRoot = "examples/sandbox/assets/",
                          .shaderRoot = "shaders/",
                          .pixelsPerUnit = 5};
 
@@ -45,21 +31,12 @@ int main(void)
 
 
     VSE_Component *spriteRenderer =
-        VSE_CreateSpriteRendererComponent("/Bunny.png");
+        VSE_CreateSpriteRendererComponent("Bunny.png");
 
 
     VSE_AddComponent(player, spriteRenderer);
 
-
-    Health *healthData = calloc(1, sizeof(Health));
-    healthData->currentHealth = 100;
-
-    VSE_Component *healthComponent = VSE_CreateComponent(
-        BEHAVIOUR, "Health", healthData, NULL, UpdateHealth, NULL);
-
-
-    VSE_AddComponent(player, healthComponent);
-
+    VSE_AddBehaviour(engine, player, "health");
 
     while (1)
     {

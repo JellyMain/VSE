@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include "VSE/engine.h"
+#include "VSE/list.h"
 #include "VSE/render.h"
 #include "VSE/window.h"
 #include "VSE/update.h"
@@ -9,6 +10,7 @@ VSE_Engine *VSE_CreateEngine(const VSE_Config *config)
 {
 	VSE_Engine *engine = calloc(1, sizeof(VSE_Engine));
 
+	engine->loadedBehavioursDLLData = VSE_ListCreate(0);
 	engine->updateSystem = VSE_CreateUpdateSystem();
 	engine->pixelsPerUnit = config->pixelsPerUnit;
 	engine->debugMode = config->debugMode;

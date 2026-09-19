@@ -1,10 +1,10 @@
 #include "VSE/window.h"
-
+#include "VSE/entity.h"
 #include "VSE/render.h"
 #include "VSE/update.h"
 #include "VSE/ui.h"
 #include "VSE/math.h"
-#include "VSE/component.h"
+#include "VSE/components.h"
 #include "VSE/engine.h"
 
 

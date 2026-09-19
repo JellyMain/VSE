@@ -9,7 +9,7 @@
 #include "VSE/list.h"
 #include "VSE/dictionary.h"
 #include "VSE/config.h"
-#include "VSE/component.h"
+#include "VSE/components.h"
 #include "VSE/material.h"
 
 typedef struct VSE_DebugData
@@ -25,6 +25,7 @@ typedef struct VSE_DebugData
 typedef struct VSE_Engine
 {
 	VSE_UpdateSystem *updateSystem;
+	VSE_List *loadedBehavioursDLLData; //List of VSE_BehaviourDLLData
 	VSE_Renderer *renderer;
 	int pixelsPerUnit;
 	VSE_List *allEntities;

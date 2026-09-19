@@ -53,14 +53,23 @@ harness level rather than relying on Claude to remember it.
 ## Build
 
 ```sh
-mingw32-make                                   # -> build/libVSE.a
-mingw32-make run                               # build lib + examples/sandbox, then launch it
-mingw32-make run EXAMPLE=pong                  # same, for examples/pong
-mingw32-make example                           # build the example without launching it
-mingw32-make test                              # build and run tests/*.c (none checked in yet)
+mingw32-make                                     # -> build/release/libVSE.a
+mingw32-make BUILD=debug                         # -> build/debug/libVSE.a, -g -O0
+mingw32-make run                                 # build lib + examples/sandbox, then launch it
+mingw32-make run EXAMPLE=pong                    # same, for examples/pong
+mingw32-make example                             # build the example without launching it
+mingw32-make run_tests                           # build and run tests/*.c (none checked in yet)
+mingw32-make compile_commands                    # regenerate compile_commands.json
 mingw32-make clean
-mingw32-make VCPKG=/path/to/installed/triplet  # if SDL2 lives elsewhere
+mingw32-make VCPKG=C:/path/to/installed/triplet  # if SDL2 lives elsewhere
 ```
 
-`.clangd` mirrors the Makefile's `CPPFLAGS`/`CFLAGS`. If one changes, change the other,
-or clangd will analyze different code than gcc compiles.
+The Makefile is in two halves: a project-agnostic BASE section (shared verbatim with the
+author's other C projects — build types, the `.c` -> `build/<type>/*.o` rule, header
+dependency tracking, `clean`, `compile_commands`) and a VSE section below it that only
+declares sources and targets. Changes that are not VSE-specific belong in BASE, and should
+be mirrored into the other projects that copy it.
+
+`.clangd` mirrors the Makefile's `INCLUDES`/`CFLAGS`, and is the fallback for files
+`compile_commands.json` does not cover. If one changes, change the other, or clangd will
+analyze different code than gcc compiles.

@@ -1,7 +1,7 @@
 #include "VSE/engine.h"
 #include "VSE/update.h"
 #include "VSE/dictionary.h"
-#include "VSE/component.h"
+#include "VSE/components.h"
 #include "glad/glad.h"
 
 

@@ -7,7 +7,7 @@
 #include "VSE/dictionary.h"
 #include "VSE/ui.h"
 #include "VSE/window.h"
-#include "VSE/component.h"
+#include "VSE/components.h"
 #include "VSE/update.h"
 
 typedef struct VSE_Renderer

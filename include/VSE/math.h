@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include "VSE/fwd.h"
 #include "VSE/types.h"
-#include "VSE/component.h"
+#include "VSE/components.h"
 
 #define VSE_PI 3.14159265359
 
